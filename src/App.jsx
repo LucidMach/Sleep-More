@@ -48,8 +48,8 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
   // barWidth is either 0-100% of 8 hours, OR 100% of its own total if revealActual is true
   const barWidth = revealActual || !isOversleep ? Math.min(100, (total / 480) * 100) : 100;
   
-  // Calculate X in X/6 of the day (1/6 of day = 4 hours = 240 mins)
-  const dayFraction = (total / 240).toFixed(1);
+  // Calculate X in X/3 of the day (1/3 of day = 8 hours = 480 mins)
+  const dayFraction = (total / 480).toFixed(1);
 
   const stages = [
     { label: 'Deep', mins: display.mins_deep, color: 'var(--deep)' },
@@ -99,7 +99,7 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(239, 68, 68, 0.8)' }} />
-            <span>Sleep &gt; 1/6th of the Day</span>
+            <span>Sleep &gt; 1/3 of the Day</span>
           </div>
         </div>
       </div>
@@ -145,7 +145,7 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               RECOVERY EVENT
             </div>
             <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              You've slept more than <span style={{ color: '#ef4444' }}>{dayFraction}/6</span> of the day.
+              You've slept more than <span style={{ color: '#ef4444' }}>{dayFraction}/3</span> of the day.
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
               Click to analyze sleep stages
