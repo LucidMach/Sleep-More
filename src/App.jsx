@@ -102,6 +102,21 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
             <span>Sleep &gt; 1/3 of the Day</span>
           </div>
         </div>
+
+        <div style={{ paddingTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          <div>
+            <div className="stat-label" style={{ marginBottom: '0.4rem', fontSize: '0.65rem' }}>SLEEP QUALITY FORMULA</div>
+            <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--accent-color)' }}>
+              (Deep + REM) / Total Sleep
+            </div>
+          </div>
+          <div>
+            <div className="stat-label" style={{ textAlign: 'right', marginBottom: '0.4rem', fontSize: '0.65rem' }}>SLEEP EFFICIENCY FORMULA</div>
+            <div style={{ fontSize: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>
+              Total Asleep / <span style={{ color: 'rgba(239, 68, 68, 0.8)' }}>Time in Bed</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ borderLeft: '1px solid var(--card-border)', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
