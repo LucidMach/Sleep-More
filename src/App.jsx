@@ -110,7 +110,7 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               <div className="stat-value" style={{ fontSize: '1.75rem' }}>{display.sleep_quality_score}%</div>
             </div>
               <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--accent-color)', opacity: 0.8 }}>
-                (Core + REM + Deep) / Total
+                (Core + REM + Deep) / Time Asleep
               </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -119,7 +119,7 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               <div className="stat-value" style={{ fontSize: '1.75rem', color: 'var(--success)' }}>{efficiency}%</div>
             </div>
               <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--success)', opacity: 0.8 }}>
-                Asleep / <span style={{color: "rgba(250, 50, 50, 0.75)"}}>Time in Bed</span>
+                Time Asleep / <span style={{color: "rgba(250, 50, 50, 0.75)"}}>Time in Bed</span>
               </div>
           </div>
         </div>
