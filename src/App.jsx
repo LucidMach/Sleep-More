@@ -103,37 +103,33 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
           </div>
         </div>
 
-        <div style={{ paddingTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div style={{ paddingTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', borderTop: '1px solid var(--card-border)', marginTop: '1.5rem' }}>
           <div>
-            <div className="stat-label" style={{ marginBottom: '0.4rem', fontSize: '0.65rem' }}>SLEEP QUALITY FORMULA</div>
-            <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--accent-color)' }}>
-              (Deep + REM) / Total Sleep
+            <div className="stat-label" style={{ marginBottom: '0.2rem', fontSize: '0.65rem' }}>SLEEP QUALITY</div>
+            <div style={{ display: 'flex', direction: "column", alignItems: 'baseline', gap: '0.75rem' }}>
+              <div className="stat-value" style={{ fontSize: '1.75rem' }}>{display.sleep_quality_score}%</div>
             </div>
+              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--accent-color)', opacity: 0.8 }}>
+                (Deep + REM) / Total
+              </div>
           </div>
-          <div>
-            <div className="stat-label" style={{ textAlign: 'right', marginBottom: '0.4rem', fontSize: '0.65rem' }}>SLEEP EFFICIENCY FORMULA</div>
-            <div style={{ fontSize: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: 'var(--success)' }}>
-              Total Asleep / <span style={{ color: 'rgba(239, 68, 68, 0.8)' }}>Time in Bed</span>
+          <div style={{ textAlign: 'right' }}>
+            <div className="stat-label" style={{ marginBottom: '0.2rem', fontSize: '0.65rem' }}>SLEEP EFFICIENCY</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <div className="stat-value" style={{ fontSize: '1.75rem', color: 'var(--success)' }}>{efficiency}%</div>
             </div>
+              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--success)', opacity: 0.8 }}>
+                Asleep / <span style={{color: "rgba(250, 50, 50, 0.75)"}}>Time in Bed</span>
+              </div>
           </div>
         </div>
       </div>
 
       <div style={{ borderLeft: '1px solid var(--card-border)', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div>
-            <div className="stat-label">QUALITY</div>
-            <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.25rem 0' }}>{display.sleep_quality_score}%</div>
-          </div>
-          <div>
-            <div className="stat-label">EFFICIENCY</div>
-            <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.25rem 0', color: 'var(--success)' }}>{efficiency}%</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div className="stat-label">DURATION</div>
-            <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.25rem 0', color: 'var(--accent-color)' }}>
-              {Math.floor(display.mins_asleep / 60)}h {display.mins_asleep % 60}m
-            </div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div className="stat-label">TOTAL DURATION</div>
+          <div className="stat-value" style={{ fontSize: '2.5rem', margin: '0.25rem 0', color: 'var(--accent-color)' }}>
+            {Math.floor(display.mins_asleep / 60)}h {display.mins_asleep % 60}m
           </div>
         </div>
         
