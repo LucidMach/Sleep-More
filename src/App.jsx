@@ -110,7 +110,7 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               <div className="stat-value" style={{ fontSize: '1.75rem' }}>{display.sleep_quality_score}%</div>
             </div>
               <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--accent-color)', opacity: 0.8 }}>
-                (Deep + REM) / Total
+                (Core + REM + Deep) / Total
               </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -532,13 +532,14 @@ const Dashboard = () => {
           </p>
           <div style={{ margin: '1rem 0', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', borderLeft: '4px solid var(--accent-color)' }}>
             <code style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
-              Quality = (Deep Sleep + REM Sleep) / Total Sleep
+              Quality = (Core + REM + Deep) / Total Sleep
             </code>
           </div>
           <ul style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li><strong>Deep Sleep:</strong> Responsible for physical restoration and immune health.</li>
             <li><strong>REM Sleep:</strong> Essential for memory consolidation and emotional processing.</li>
-            <li><strong>Goal:</strong> Aim for a score above 40% for optimal recovery.</li>
+            <li><strong>Core Sleep:</strong> The baseline sleep stage for cognitive maintenance.</li>
+            <li><strong>Goal:</strong> Aim for a score above 85% with this revised metric.</li>
           </ul>
         </div>
       </div>

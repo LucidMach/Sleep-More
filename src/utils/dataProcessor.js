@@ -130,7 +130,7 @@ export const aggregateData = (data, timeframe) => {
       hrv_asleep_avg: Math.round(g.hrv_asleep_avg / g.count),
       hrv_awake_avg: Math.round(g.hrv_awake_avg / g.count),
       mins_daylight: Math.round(g.mins_daylight / g.count),
-      sleep_quality_score: Math.round((avgDeepRem / (avgSleep || 1)) * 100),
+      sleep_quality_score: Math.round(((avgCore + avgRem + avgDeep) / (avgSleep || 1)) * 100),
       consistency_score: Math.round(Math.max(0, 100 - (consistency / 60) * 20)), // Scale consistency to 0-100
       recovery_ratio: (g.hrv_asleep_avg / (g.hrv_awake_avg || 1)).toFixed(2),
     };
