@@ -20,7 +20,6 @@ import { fetchData, aggregateData, calculateCorrelations } from './utils/dataPro
 
 const SleepHeatmap = ({ data, onSelectDate }) => {
   const [hovered, setHovered] = useState(null);
-  const [revealActual, setRevealActual] = useState(false);
 
   const avgQuality = Math.round(data.reduce((acc, d) => acc + d.sleep_quality_score, 0) / (data.length || 1));
   const avgMins = Math.round(data.reduce((acc, d) => acc + d.mins_asleep, 0) / (data.length || 1));
@@ -43,13 +42,16 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
 
   const total = display.mins_asleep + display.mins_awake;
   const efficiency = Math.round((display.mins_asleep / (total || 1)) * 100);
-  const isOversleep = total > 480; // More than 8 hours
+  const hrs = display.mins_asleep / 60;
+  const isOptimal = hrs >= 6 && hrs <= 8;
+  const isSubOptimal = (hrs > 8 && hrs <= 10) || (hrs >= 4 && hrs < 6);
+  const isCritical = hrs < 4 || hrs > 10;
   
-  // barWidth is either 0-100% of 8 hours, OR 100% of its own total if revealActual is true
-  const barWidth = revealActual || !isOversleep ? Math.min(100, (total / 480) * 100) : 100;
+  // barWidth is absolute (scaled to 8h) for optimal sleep, relative (100%) for others
+  const barWidth = isOptimal ? Math.min(100, (total / 480) * 100) : 100;
   
   // Calculate X in X/3 of the day (1/3 of day = 8 hours = 480 mins)
-  const dayFraction = (total / 480).toFixed(1);
+  const dayFraction = (display.mins_asleep / 480).toFixed(1);
 
   const stages = [
     { label: 'Deep', mins: display.mins_deep, color: 'var(--deep)' },
@@ -59,25 +61,52 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
     { label: 'Awake', mins: display.mins_awake, color: 'var(--awake)' },
   ];
 
-  useEffect(() => {
-    setRevealActual(false);
-  }, [hovered]);
-
   return (
     <div className="card" style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
       <div>
         <h2><Calendar size={20} /> Sleep Quality History</h2>
         <div className="heatmap-container">
           {data.map((d, i) => {
-            const isDayOversleep = (d.mins_asleep + d.mins_awake) > 480;
-            const colorBase = isDayOversleep ? '239, 68, 68' : '99, 102, 241';
+            const hrs = d.mins_asleep / 60;
+            const opacity = Math.max(0.1, d.sleep_quality_score / 100);
+            let background = '';
+            let borderColor = 'none';
+            let boxShadow = 'none';
+
+            if (hrs >= 6 && hrs <= 8) {
+              background = `rgba(99, 102, 241, ${opacity})`; // Solid Purple
+              if (d.sleep_quality_score > 80) borderColor = 'var(--accent-color)';
+            } else if ((hrs > 8 && hrs <= 10) || (hrs >= 4 && hrs < 6)) {
+              const color1 = '245, 158, 11'; // Orange
+              const color2 = '217, 119, 6';  // Darker Orange
+              background = `linear-gradient(135deg, rgba(${color1}, ${opacity}), rgba(${color2}, ${opacity}))`;
+              if (d.sleep_quality_score > 80) borderColor = 'var(--warning)';
+              
+              if (hrs > 8) {
+                boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)'; // Bulge
+              } else {
+                boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Indent
+              }
+            } else {
+              const color1 = '239, 68, 68'; // Red
+              const color2 = '185, 28, 28'; // Darker Red
+              background = `linear-gradient(135deg, rgba(${color1}, ${opacity}), rgba(${color2}, ${opacity}))`;
+              if (d.sleep_quality_score > 80) borderColor = 'var(--danger)';
+              if (hrs > 10) {
+                boxShadow = '3px 3px 6px rgba(0,0,0,0.6), -1px -1px 3px rgba(255,255,255,0.05)'; // Extra Bulge
+              } else {
+                boxShadow = 'inset 3px 3px 5px rgba(0,0,0,0.7), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Extra Indent
+              }
+            }
+
             return (
               <div 
                 key={i} 
                 className="heatmap-cell" 
                 style={{ 
-                  backgroundColor: `rgba(${colorBase}, ${Math.max(0.1, d.sleep_quality_score / 100)})`,
-                  border: d.sleep_quality_score > 80 ? `1px solid ${isDayOversleep ? '#ef4444' : 'var(--accent-color)'}` : 'none'
+                  background: background,
+                  border: borderColor !== 'none' ? `1px solid ${borderColor}` : 'none',
+                  boxShadow: boxShadow
                 }}
                 onMouseEnter={() => setHovered({ ...d, index: i })}
                 onMouseLeave={() => setHovered(null)}
@@ -86,8 +115,8 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
             );
           })}
         </div>
-        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>Low Quality</span>
               <div style={{ display: 'flex', gap: '2px' }}>
@@ -96,10 +125,20 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               <span>High Quality</span>
             </div>
           </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(239, 68, 68, 0.8)' }} />
-            <span>Sleep &gt; 1/3 of the Day</span>
+
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgb(99, 102, 241)' }} />
+              <span>Optimal (6-8h)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }} />
+              <span>Sub-optimal (4-6h or 8-10h)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'linear-gradient(135deg, #ef4444, #b91c1c)' }} />
+              <span>Critical (&lt;4h or &gt;10h)</span>
+            </div>
           </div>
         </div>
 
@@ -137,33 +176,8 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
           {display.label}
         </div>
 
-        {isOversleep && !revealActual ? (
-          <div 
-            onClick={() => setRevealActual(true)}
-            style={{ 
-              marginBottom: '1.5rem', 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              padding: '1.25rem', 
-              borderRadius: '0.75rem', 
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textAlign: 'center'
-            }}
-            className="oversleep-alert"
-          >
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
-              RECOVERY EVENT
-            </div>
-            <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-              You've slept more than <span style={{ color: '#ef4444' }}>{dayFraction}/3</span> of the day.
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
-              Click to analyze sleep stages
-            </div>
-          </div>
-        ) : (
-          <div style={{ position: 'relative', height: 44, marginBottom: '1.5rem' }}>
+        <div style={{ position: 'relative', height: 44, marginBottom: '1.5rem' }}>
+          {isOptimal && (
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'space-between', padding: '0 2px' }}>
               {[...Array(9)].map((_, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
@@ -172,22 +186,29 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
                 </div>
               ))}
             </div>
-            <div style={{ position: 'absolute', top: 6, left: 0, width: '100%', height: 24, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ height: '100%', width: `${barWidth}%`, display: 'flex', borderRadius: 6, overflow: 'hidden', transition: 'width 0.3s ease' }}>
-                {stages.map(stage => (
-                  <div 
-                    key={stage.label} 
-                    style={{ 
-                      width: `${(stage.mins / (total || 1)) * 100}%`, 
-                      background: stage.color,
-                      height: '100%'
-                    }} 
-                  />
-                ))}
-              </div>
+          )}
+          
+          {!isOptimal && (
+            <div style={{ position: 'absolute', top: -18, left: 0, fontSize: '0.6rem', color: isCritical ? 'var(--danger)' : 'var(--warning)', fontWeight: 600, letterSpacing: '0.05em' }}>
+              {hrs > 8 ? 'RELATIVE VIEW (EXCESSIVE)' : 'RELATIVE VIEW (INSUFFICIENT)'}
+            </div>
+          )}
+
+          <div style={{ position: 'absolute', top: 6, left: 0, width: '100%', height: 24, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ height: '100%', width: `${barWidth}%`, display: 'flex', borderRadius: 6, overflow: 'hidden', transition: 'width 0.3s ease' }}>
+              {stages.map(stage => (
+                <div 
+                  key={stage.label} 
+                  style={{ 
+                    width: `${(stage.mins / (total || 1)) * 100}%`, 
+                    background: stage.color,
+                    height: '100%'
+                  }} 
+                />
+              ))}
             </div>
           </div>
-        )}
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
