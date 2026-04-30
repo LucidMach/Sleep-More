@@ -128,33 +128,47 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
   const getCellColor = (d) => {
     if (!d) return { background: 'rgba(255,255,255,0.03)', border: 'none', boxShadow: 'none' };
     const hrs = d.mins_asleep / 60;
-    const opacity = Math.max(0.1, d.sleep_quality_score / 100);
+    const opacity = Math.max(0.2, d.sleep_quality_score / 100);
+    const saturation = 30 + (d.sleep_quality_score * 0.7); // 30% to 100% saturation
+    const filter = `saturate(${saturation}%)`;
     let r, g, b;
     let borderColor = 'none';
     let boxShadow = 'none';
-
+    
     if (hrs >= 6 && hrs <= 8) {
       r = 99; g = 102; b = 241; // Purple
-      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+      if (d.sleep_quality_score > 85) {
+        borderColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        boxShadow = `0 0 8px rgba(${r}, ${g}, ${b}, 0.4)`;
+      }
     } else if (hrs < 6) {
       const ratio = Math.min(1, hrs / 6);
       r = Math.round(239 + (245 - 239) * ratio);
       g = Math.round(68 + (158 - 68) * ratio);
       b = Math.round(68 + (11 - 68) * ratio);
-      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
-      boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)';
+      if (d.sleep_quality_score > 85) {
+        borderColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        boxShadow = `0 0 8px rgba(${r}, ${g}, ${b}, 0.4)`;
+      } else {
+        boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)';
+      }
     } else {
       const ratio = Math.min(1, (hrs - 8) / 4);
       r = Math.round(245 + (239 - 245) * ratio);
       g = Math.round(158 + (68 - 158) * ratio);
       b = Math.round(11 + (68 - 11) * ratio);
-      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
-      boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)';
+      if (d.sleep_quality_score > 85) {
+        borderColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        boxShadow = `0 0 8px rgba(${r}, ${g}, ${b}, 0.4)`;
+      } else {
+        boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)';
+      }
     }
     return { 
       background: `rgba(${r}, ${g}, ${b}, ${opacity})`,
-      border: borderColor !== 'none' ? `1px solid ${borderColor}` : 'none',
-      boxShadow
+      border: borderColor !== 'none' ? `1px solid ${borderColor}` : '1px solid rgba(255,255,255,0.03)',
+      boxShadow,
+      filter
     };
   };
 
@@ -262,7 +276,19 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span>Low Quality</span>
               <div style={{ display: 'flex', gap: '2px' }}>
-                {[0.2, 0.4, 0.6, 0.8, 1].map(o => <div key={o} style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(99, 102, 241, ${o})` }} />)}
+                {[0.2, 0.4, 0.6, 0.8, 1].map(q => (
+                  <div 
+                    key={q} 
+                    style={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: 2, 
+                      background: `rgba(99, 102, 241, ${q})`,
+                      filter: `saturate(${30 + q * 70}%)`,
+                      border: q > 0.8 ? '1px solid rgba(99, 102, 241, 0.8)' : 'none'
+                    }} 
+                  />
+                ))}
               </div>
               <span>High Quality</span>
             </div>
@@ -324,8 +350,11 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               <div className="stat-value" style={{ fontSize: '1.75rem' }}>{display.sleep_quality_score}%</div>
             </div>
               <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--accent-color)', opacity: 0.8 }}>
-                (Core + REM + Deep) / Time Asleep
+                (REM + Deep) / Time Asleep
               </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.65rem', marginTop: "0.75rem"}}>
+              *normalised to a scale of 0-100
+                </p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="stat-label" style={{ marginBottom: '0.2rem', fontSize: '0.65rem' }}>SLEEP EFFICIENCY</div>
