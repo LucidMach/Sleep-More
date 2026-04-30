@@ -101,11 +101,11 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '1px solid var(--card-border)', paddingLeft: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 0.2)', boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.5)' }} />
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 1)', boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.5)' }} />
                 <span style={{ fontSize: '0.65rem' }}>Indent: Under-sleep</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 0.2)', boxShadow: '1px 1px 2px rgba(0,0,0,0.5)' }} />
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 1)', boxShadow: '1px 1px 2px rgba(0,0,0,0.5)' }} />
                 <span style={{ fontSize: '0.65rem' }}>Bulge: Over-sleep</span>
               </div>
             </div>
