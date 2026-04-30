@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Moon, 
   Sun, 
   Activity, 
-  BarChart3, 
   TrendingUp, 
   Calendar,
   Info,
@@ -73,31 +72,28 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
             let borderColor = 'none';
             let boxShadow = 'none';
 
+            let r, g, b;
             if (hrs >= 6 && hrs <= 8) {
-              background = `rgba(99, 102, 241, ${opacity})`; // Solid Purple
-              if (d.sleep_quality_score > 80) borderColor = 'var(--accent-color)';
-            } else if ((hrs > 8 && hrs <= 10) || (hrs >= 4 && hrs < 6)) {
-              const color1 = '245, 158, 11'; // Orange
-              const color2 = '217, 119, 6';  // Darker Orange
-              background = `linear-gradient(135deg, rgba(${color1}, ${opacity}), rgba(${color2}, ${opacity}))`;
-              if (d.sleep_quality_score > 80) borderColor = 'var(--warning)';
-              
-              if (hrs > 8) {
-                boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)'; // Bulge
-              } else {
-                boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Indent
-              }
+              r = 99; g = 102; b = 241; // Purple
+              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+            } else if (hrs < 6) {
+              // Red to Orange gradient logic
+              const ratio = Math.min(1, hrs / 6);
+              r = Math.round(239 + (245 - 239) * ratio);
+              g = Math.round(68 + (158 - 68) * ratio);
+              b = Math.round(68 + (11 - 68) * ratio);
+              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+              boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Indent
             } else {
-              const color1 = '239, 68, 68'; // Red
-              const color2 = '185, 28, 28'; // Darker Red
-              background = `linear-gradient(135deg, rgba(${color1}, ${opacity}), rgba(${color2}, ${opacity}))`;
-              if (d.sleep_quality_score > 80) borderColor = 'var(--danger)';
-              if (hrs > 10) {
-                boxShadow = '3px 3px 6px rgba(0,0,0,0.6), -1px -1px 3px rgba(255,255,255,0.05)'; // Extra Bulge
-              } else {
-                boxShadow = 'inset 3px 3px 5px rgba(0,0,0,0.7), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Extra Indent
-              }
+              // hrs > 8: Orange to Red gradient logic
+              const ratio = Math.min(1, (hrs - 8) / 4);
+              r = Math.round(245 + (239 - 245) * ratio);
+              g = Math.round(158 + (68 - 158) * ratio);
+              b = Math.round(11 + (68 - 11) * ratio);
+              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+              boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)'; // Bulge
             }
+            background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
 
             return (
               <div 
@@ -126,18 +122,26 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgb(99, 102, 241)' }} />
-              <span>Optimal (6-8h)</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+            <div style={{ 
+              height: 10, 
+              width: '100%', 
+              borderRadius: 5, 
+              background: 'linear-gradient(to right, var(--danger) 0%, var(--warning) 45%, var(--accent-color) 50%, var(--accent-color) 66%, var(--warning) 72%, var(--danger) 100%)',
+              position: 'relative',
+              marginBottom: '1rem'
+            }}>
+              {[0, 2, 4, 6, 8, 10, 12].map(h => (
+                <div key={h} style={{ position: 'absolute', left: `${(h / 12) * 100}%`, top: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateX(-50%)' }}>
+                  <div style={{ width: 1, height: 4, background: 'var(--card-border)' }} />
+                  <span style={{ fontSize: '0.65rem', marginTop: '2px' }}>{h}h</span>
+                </div>
+              ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }} />
-              <span>Sub-optimal (4-6h or 8-10h)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: 'linear-gradient(135deg, #ef4444, #b91c1c)' }} />
-              <span>Critical (&lt;4h or &gt;10h)</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', opacity: 0.8, marginTop: '0.25rem' }}>
+              <span>Insufficient</span>
+              <span>Optimal</span>
+              <span>Excessive</span>
             </div>
           </div>
         </div>
