@@ -97,11 +97,27 @@ header {
   cursor: not-allowed;
 }
 
-.heatmap-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 1rem;
+.heatmap-scroll-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) transparent;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 3px;
+}
+
+.heatmap-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
 }
 
 .heatmap-cell {
@@ -109,13 +125,14 @@ header {
   height: 14px;
   border-radius: 2px;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.2s;
 }
 
 .heatmap-cell:hover {
   transform: scale(1.4);
   z-index: 10;
-  box-shadow: 0 0 8px var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-color);
+  filter: brightness(1.2);
 }
 
 .grid {

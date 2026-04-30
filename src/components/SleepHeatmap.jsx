@@ -1,8 +1,93 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar } from 'lucide-react';
+import { 
+  parseISO, 
+  getYear, 
+  getDay, 
+  format, 
+  startOfYear, 
+  endOfYear, 
+  eachDayOfInterval, 
+  isSameDay,
+  getMonth,
+  startOfMonth,
+  addWeeks,
+  differenceInWeeks,
+  endOfWeek,
+  startOfWeek,
+  endOfMonth
+} from 'date-fns';
 
 const SleepHeatmap = ({ data, onSelectDate }) => {
   const [hovered, setHovered] = useState(null);
+
+  // Group data by year and fill gaps
+  const { yearGroups, allYears } = useMemo(() => {
+    if (!data || data.length === 0) return { yearGroups: {}, allYears: [] };
+
+    const years = [...new Set(data.map(d => getYear(parseISO(d.label))))].sort((a, b) => a - b);
+    const groups = {};
+
+    years.forEach(year => {
+      const yearData = data.filter(d => getYear(parseISO(d.label)) === year);
+      if (yearData.length === 0) return;
+
+      const dates = yearData.map(d => parseISO(d.label));
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+      
+      const rangeStart = startOfWeek(minDate);
+      const rangeEnd = endOfWeek(maxDate);
+      const daysInRange = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+      
+      const dayMap = new Map();
+      yearData.forEach(d => {
+        dayMap.set(d.label, d);
+      });
+
+      // Prepare weeks and months
+      const weeks = [];
+      let currentWeek = [];
+      
+      daysInRange.forEach((day, i) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const d = dayMap.get(dateStr);
+        const dayOfWeek = getDay(day);
+        
+        currentWeek[dayOfWeek] = { 
+          date: day, 
+          data: d, 
+          dateStr 
+        };
+
+        if (dayOfWeek === 6 || i === daysInRange.length - 1) {
+          weeks.push(currentWeek);
+          currentWeek = [];
+        }
+      });
+
+      // Get month positions
+      const months = [];
+      let lastMonth = -1;
+      weeks.forEach((week, weekIndex) => {
+        // Find a day in this week that belongs to the current year to get the correct month name
+        const dayInYear = week.find(d => d && getYear(d.date) === year);
+        const referenceDay = dayInYear || week.find(d => d);
+        
+        if (referenceDay) {
+          const m = getMonth(referenceDay.date);
+          if (m !== lastMonth) {
+            months.push({ name: format(referenceDay.date, 'MMM'), weekIndex });
+            lastMonth = m;
+          }
+        }
+      });
+
+      groups[year] = { weeks, months };
+    });
+
+    return { yearGroups: groups, allYears: years };
+  }, [data]);
 
   const avgQuality = Math.round(data.reduce((acc, d) => acc + d.sleep_quality_score, 0) / (data.length || 1));
   const avgMins = Math.round(data.reduce((acc, d) => acc + d.mins_asleep, 0) / (data.length || 1));
@@ -40,54 +125,137 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
     { label: 'Awake', mins: display.mins_awake, color: 'var(--awake)' },
   ];
 
+  const getCellColor = (d) => {
+    if (!d) return { background: 'rgba(255,255,255,0.03)', border: 'none', boxShadow: 'none' };
+    const hrs = d.mins_asleep / 60;
+    const opacity = Math.max(0.1, d.sleep_quality_score / 100);
+    let r, g, b;
+    let borderColor = 'none';
+    let boxShadow = 'none';
+
+    if (hrs >= 6 && hrs <= 8) {
+      r = 99; g = 102; b = 241; // Purple
+      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+    } else if (hrs < 6) {
+      const ratio = Math.min(1, hrs / 6);
+      r = Math.round(239 + (245 - 239) * ratio);
+      g = Math.round(68 + (158 - 68) * ratio);
+      b = Math.round(68 + (11 - 68) * ratio);
+      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+      boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)';
+    } else {
+      const ratio = Math.min(1, (hrs - 8) / 4);
+      r = Math.round(245 + (239 - 245) * ratio);
+      g = Math.round(158 + (68 - 158) * ratio);
+      b = Math.round(11 + (68 - 11) * ratio);
+      if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
+      boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)';
+    }
+    return { 
+      background: `rgba(${r}, ${g}, ${b}, ${opacity})`,
+      border: borderColor !== 'none' ? `1px solid ${borderColor}` : 'none',
+      boxShadow
+    };
+  };
+
   return (
     <div className="card" style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
-      <div>
+      <div style={{ minWidth: 0 }}>
         <h2><Calendar size={20} /> Sleep Quality History</h2>
-        <div className="heatmap-container">
-          {data.map((d, i) => {
-            const hrs = d.mins_asleep / 60;
-            const opacity = Math.max(0.1, d.sleep_quality_score / 100);
-            let background = '';
-            let borderColor = 'none';
-            let boxShadow = 'none';
+        <div className="heatmap-scroll-wrapper" style={{ overflowX: 'auto', paddingBottom: '1rem', cursor: 'grab' }}>
+          <div style={{ display: 'flex', gap: '1rem', width: 'max-content', padding: '0.5rem' }}>
+            {allYears.map(year => {
+              const { weeks, months } = yearGroups[year];
+              return (
+                <div key={year} style={{ display: 'flex', gap: '0.75rem', alignItems: 'start' }}>
+                  {/* Vertical Year Label */}
+                  <div style={{ 
+                    writingMode: 'vertical-rl', 
+                    transform: 'rotate(180deg)', 
+                    fontSize: '1.5rem', 
+                    fontWeight: 900, 
+                    color: 'var(--text-secondary)', 
+                    opacity: 0.1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingTop: '24px', // Align with grid start (below month labels)
+                    letterSpacing: '0.1em',
+                    userSelect: 'none',
+                    alignSelf: 'stretch'
+                  }}>
+                    {year}
+                  </div>
 
-            let r, g, b;
-            if (hrs >= 6 && hrs <= 8) {
-              r = 99; g = 102; b = 241; // Purple
-              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
-            } else if (hrs < 6) {
-              const ratio = Math.min(1, hrs / 6);
-              r = Math.round(239 + (245 - 239) * ratio);
-              g = Math.round(68 + (158 - 68) * ratio);
-              b = Math.round(68 + (11 - 68) * ratio);
-              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
-              boxShadow = 'inset 2px 2px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(255,255,255,0.05)'; // Indent
-            } else {
-              const ratio = Math.min(1, (hrs - 8) / 4);
-              r = Math.round(245 + (239 - 245) * ratio);
-              g = Math.round(158 + (68 - 158) * ratio);
-              b = Math.round(11 + (68 - 11) * ratio);
-              if (d.sleep_quality_score > 80) borderColor = `rgb(${r}, ${g}, ${b})`;
-              boxShadow = '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(255,255,255,0.05)'; // Bulge
-            }
-            background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* Month Labels */}
+                    <div style={{ display: 'flex', height: '20px', marginBottom: '4px', position: 'relative' }}>
+                      {months.map((m, i) => (
+                        <div key={i} style={{ 
+                          position: 'absolute', 
+                          left: 40 + (m.weekIndex * 18), 
+                          fontSize: '0.7rem', 
+                          color: 'var(--text-secondary)',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {m.name}
+                        </div>
+                      ))}
+                    </div>
 
-            return (
-              <div 
-                key={i} 
-                className="heatmap-cell" 
-                style={{ 
-                  background: background,
-                  border: borderColor !== 'none' ? `1px solid ${borderColor}` : 'none',
-                  boxShadow: boxShadow
-                }}
-                onMouseEnter={() => setHovered({ ...d, index: i })}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => onSelectDate(i)}
-              />
-            );
-          })}
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {/* Weekday Labels */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '4px', marginRight: '8px' }}>
+                        {['SUN', 'MON', 'TUE', 'WED', 'THUR', 'FRI', 'SAT'].map((day, i) => (
+                          <div key={i} style={{ 
+                            height: 14, 
+                            width: 32,
+                            fontSize: '0.55rem', 
+                            color: 'var(--text-secondary)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            fontWeight: 600,
+                            opacity: 0.4 
+                          }}>
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* The Grid */}
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {weeks.map((week, wi) => (
+                          <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {Array.from({ length: 7 }).map((_, di) => {
+                              const dayData = week[di];
+                              const style = getCellColor(dayData?.data);
+                              return (
+                                <div 
+                                  key={di}
+                                  className="heatmap-cell"
+                                  style={style}
+                                  onMouseEnter={() => dayData?.data && setHovered({ ...dayData.data, label: dayData.dateStr })}
+                                  onMouseLeave={() => setHovered(null)}
+                                  onClick={() => {
+                                    if (dayData?.data) {
+                                      // Find index in original data
+                                      const idx = data.findIndex(d => d.label === dayData.dateStr);
+                                      if (idx !== -1) onSelectDate(idx);
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
         <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
