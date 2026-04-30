@@ -120,6 +120,17 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               </div>
               <span>High Quality</span>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '1px solid var(--card-border)', paddingLeft: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 0.2)', boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.5)' }} />
+                <span style={{ fontSize: '0.65rem' }}>Indent: Under-sleep</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(148, 163, 184, 0.2)', boxShadow: '1px 1px 2px rgba(0,0,0,0.5)' }} />
+                <span style={{ fontSize: '0.65rem' }}>Bulge: Over-sleep</span>
+              </div>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
@@ -131,6 +142,20 @@ const SleepHeatmap = ({ data, onSelectDate }) => {
               position: 'relative',
               marginBottom: '1rem'
             }}>
+              {/* Duration Indicator */}
+              <div style={{ 
+                position: 'absolute', 
+                left: `${Math.min(100, (display.mins_asleep / 60 / 12) * 100)}%`, 
+                top: -3, 
+                height: 16, 
+                width: 2, 
+                background: '#fff', 
+                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                borderRadius: 1,
+                zIndex: 10,
+                transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+              }} />
+
               {[0, 2, 4, 6, 8, 10, 12].map(h => (
                 <div key={h} style={{ position: 'absolute', left: `${(h / 12) * 100}%`, top: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translateX(-50%)' }}>
                   <div style={{ width: 1, height: 4, background: 'var(--card-border)' }} />
