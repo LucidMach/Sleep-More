@@ -71,6 +71,7 @@ export const aggregateData = (data, timeframe) => {
         mins_daylight: 0,
         mins_in_bed: 0,
         sleep_starts: [],
+        sleep_events: [],
       };
     }
     
@@ -100,6 +101,12 @@ export const aggregateData = (data, timeframe) => {
       let mins = s1;
       if (h1 < 12) mins += 1440; 
       g.sleep_starts.push(mins);
+      
+      g.sleep_events.push({
+        start: s1,
+        end: s2,
+        duration: row.mins_asleep || 0
+      });
     }
   });
   
