@@ -110,7 +110,7 @@ const Dashboard = () => {
         <StatCard label="Deep Sleep Avg" value={`${avgDeep}m`} trendLabel="5% vs last period" />
       </div>
 
-      <SleepCharts visibleData={visibleData} />
+      <SleepCharts visibleData={visibleData} allDailyData={dailyData} />
 
       <div className="grid">
         <HabitInsights correlations={correlations} />

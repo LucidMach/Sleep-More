@@ -96,7 +96,13 @@ export const aggregateData = (data, timeframe) => {
       // If sleep end is early morning and start is late night
       if (s2 < s1) s2 += 1440;
       
-      g.mins_in_bed += (s2 - s1);
+      const inBedDuration = s2 - s1;
+      // Sanity filter: Skip events that are clearly data errors (> 15h or < 1h in-bed)
+      if (inBedDuration > 900 || inBedDuration < 60) {
+        return;
+      }
+
+      g.mins_in_bed += inBedDuration;
       
       let mins = s1;
       if (h1 < 12) mins += 1440; 

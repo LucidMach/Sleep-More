@@ -7,7 +7,7 @@ import { Clock, Activity, Sun } from 'lucide-react';
 import CustomTooltip from './CustomTooltip';
 
 const formatBucketTime = (hour, use24Hour) => {
-  const endHour = (hour + 2) % 24;
+  const endHour = (hour + 1) % 24;
   if (use24Hour) {
     return `${hour.toString().padStart(2, '0')}:00 - ${endHour.toString().padStart(2, '0')}:00`;
   }
@@ -31,20 +31,22 @@ const SankeyNode = (props) => {
     >
       <rect 
         x={x} y={y} width={width} height={height} 
-        fill={payload.fill || 'var(--text-secondary)'} 
-        rx="3" 
-        fillOpacity={1}
-        style={{ transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
+        fill={payload.fill} 
+        rx="2"
+        fillOpacity={0.9}
+        style={{ 
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
       />
-      <g transform={`translate(${isSleep ? x - 55 : x + width + 55}, ${y + height / 2})`}>
+      <g transform={`translate(${isSleep ? x - 70 : x + width + 70}, ${y + height / 2})`}>
         <text
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--text-primary)"
-          fontSize={10}
+          fontSize={11}
           fontWeight={700}
-          letterSpacing="0.01em"
-          style={{ pointerEvents: 'none', opacity: 0.8 }}
+          letterSpacing="0.02em"
+          style={{ pointerEvents: 'none' }}
         >
           {formatBucketTime(payload.hour, use24Hour)}
         </text>
@@ -60,49 +62,61 @@ const SankeyLink = (props) => {
   const isRelated = hoveredNode && (payload.source.name === hoveredNode || payload.target.name === hoveredNode);
   const isHighlighted = selfHovered || isRelated;
   
+  const gradientId = `link-gradient-${payload.source.name}-${payload.target.name}`.replace(/:/g, '-');
+  
   return (
-    <path
-      d={`
-        M${sourceX},${sourceY}
-        C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}
-      `}
-      stroke={isHighlighted ? '#fff' : 'rgba(148, 163, 184, 0.1)'}
-      strokeWidth={Math.max(1, linkWidth)}
-      fill="none"
-      strokeOpacity={isHighlighted ? 0.8 : 0.2}
-      onMouseEnter={() => setSelfHovered(true)}
-      onMouseLeave={() => setSelfHovered(false)}
-      style={{ transition: 'stroke 0.3s ease, stroke-opacity 0.3s ease', cursor: 'pointer' }}
-    />
+    <g>
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={payload.source.fill} stopOpacity={isHighlighted ? 0.8 : 0.25} />
+          <stop offset="100%" stopColor={payload.target.fill} stopOpacity={isHighlighted ? 0.8 : 0.25} />
+        </linearGradient>
+      </defs>
+      <path
+        d={`
+          M${sourceX},${sourceY}
+          C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}
+        `}
+        stroke={`url(#${gradientId})`}
+        strokeWidth={Math.max(1, linkWidth)}
+        fill="none"
+        onMouseEnter={() => setSelfHovered(true)}
+        onMouseLeave={() => setSelfHovered(false)}
+        style={{ 
+          transition: 'all 0.4s ease', 
+          cursor: 'pointer',
+          filter: isHighlighted ? 'saturate(1.2)' : 'saturate(0.4) grayscale(0.2)',
+          opacity: isHighlighted ? 1 : 0.8
+        }}
+      />
+      {isHighlighted && (
+        <text
+          x={(sourceX + targetX) / 2}
+          y={(sourceY + targetY) / 2}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="var(--text-primary)"
+          fontSize={11}
+          fontWeight={800}
+          style={{ pointerEvents: 'none' }}
+        >
+          {payload.originalValue}
+        </text>
+      )}
+    </g>
   );
 };
 
 const getLinkColor = (durationMins) => {
   const hrs = durationMins / 60;
-  let r, g, b;
-  if (hrs >= 6 && hrs <= 8) {
-    r = 99; g = 102; b = 241;
-  } else if (hrs < 6) {
-    const ratio = Math.min(1, hrs / 6);
-    r = Math.round(239 + (245 - 239) * ratio);
-    g = Math.round(68 + (158 - 68) * ratio);
-    b = Math.round(68 + (11 - 68) * ratio);
-  } else {
-    const ratio = Math.min(1, (hrs - 8) / 4);
-    r = Math.round(245 + (239 - 245) * ratio);
-    g = Math.round(158 + (68 - 158) * ratio);
-    b = Math.round(11 + (68 - 11) * ratio);
-  }
-  return `rgb(${r}, ${g}, ${b})`;
+  if (hrs >= 6 && hrs <= 8) return '#6366F1'; // Indigo
+  if (hrs < 6) return '#F43F5E'; // Rose
+  return '#F59E0B'; // Amber
 };
 
-const getBucket = (mins) => {
-  const m = mins % 1440;
-  const h = Math.floor(m / 60);
-  return Math.floor(h / 2) * 2;
-};
+const getBucket = (mins) => Math.floor(mins / 60) % 24;
 
-const SleepCharts = ({ visibleData }) => {
+const SleepCharts = ({ visibleData, allDailyData }) => {
   const [use24Hour, setUse24Hour] = useState(true);
   const [hoveredNode, setHoveredNode] = useState(null);
 
@@ -113,22 +127,38 @@ const SleepCharts = ({ visibleData }) => {
     const nodeDurations = new Map();
     
     const uniqueBuckets = new Set();
-    visibleData.forEach(d => {
+    const sourceData = (allDailyData && allDailyData.length > 0) ? allDailyData : visibleData;
+
+    sourceData.forEach(d => {
       if (d.sleep_events) {
         d.sleep_events.forEach(event => {
-          uniqueBuckets.add(`Sleep:${getBucket(event.start)}`);
-          uniqueBuckets.add(`Wake:${getBucket(event.end)}`);
+          const sleepBucket = getBucket(event.start);
+          const wakeBucket = getBucket(event.end);
+          
+          // Skip self-loops and nonsensical evening wake times
+          if (sleepBucket === wakeBucket || wakeBucket >= 18) return;
+
+          uniqueBuckets.add(`Sleep:${sleepBucket}`);
+          uniqueBuckets.add(`Wake:${wakeBucket}`);
         });
       }
     });
 
+    // 2. Sort them chronologically (Sleep-cycle aware: starts at 18:00 / 6 PM)
+    const getSortValue = (key) => {
+      const [type, hourStr] = key.split(':');
+      const hour = parseInt(hourStr);
+      return (hour - 18 + 24) % 24;
+    };
+
     const sortedNames = Array.from(uniqueBuckets).sort((a, b) => {
-      const [typeA, hourA] = a.split(':');
-      const [typeB, hourB] = b.split(':');
+      const [typeA] = a.split(':');
+      const [typeB] = b.split(':');
       if (typeA !== typeB) return typeA === 'Wake' ? 1 : -1;
-      return parseInt(hourA) - parseInt(hourB);
+      return getSortValue(a) - getSortValue(b);
     });
 
+    // 3. Initialize nodes in sorted order
     sortedNames.forEach(key => {
       const [type, hour] = key.split(':');
       nodeMap.set(key, nodes.length);
@@ -137,14 +167,22 @@ const SleepCharts = ({ visibleData }) => {
 
     const linkMap = new Map();
     
-    visibleData.forEach(d => {
+    sourceData.forEach(d => {
       if (d.sleep_events) {
         d.sleep_events.forEach(event => {
-          const sleepKey = `Sleep:${getBucket(event.start)}`;
-          const wakeKey = `Wake:${getBucket(event.end)}`;
+          const sleepBucket = getBucket(event.start);
+          const wakeBucket = getBucket(event.end);
+          
+          // Skip self-loops and nonsensical evening wake times
+          if (sleepBucket === wakeBucket || wakeBucket >= 18) return;
+
+          const sleepKey = `Sleep:${sleepBucket}`;
+          const wakeKey = `Wake:${wakeBucket}`;
           
           const source = nodeMap.get(sleepKey);
           const target = nodeMap.get(wakeKey);
+          
+          if (source === undefined || target === undefined) return;
           
           if (!nodeDurations.has(source)) nodeDurations.set(source, []);
           if (!nodeDurations.has(target)) nodeDurations.set(target, []);
@@ -162,41 +200,81 @@ const SleepCharts = ({ visibleData }) => {
       }
     });
 
-    nodes.forEach((node, i) => {
-      const durations = nodeDurations.get(i) || [];
-      const avgDuration = durations.reduce((a, b) => a + b, 0) / (durations.length || 1);
-      node.fill = getLinkColor(avgDuration);
-    });
-
     for (const link of linkMap.values()) {
+      const avgDuration = link.durations.reduce((a, b) => a + b, 0) / link.durations.length;
       links.push({
         source: link.source,
         target: link.target,
-        value: link.value,
+        // Minimal boost to ensure visibility without distortion
+        value: link.value + 0.3, 
+        originalValue: link.value,
+        fill: getLinkColor(avgDuration),
+        avgDuration
       });
     }
 
-    if (nodes.length === 0 || links.length === 0) {
-      return { nodes: [{ name: 'No Data', type: 'Sleep', hour: 0 }, { name: 'Empty', type: 'Wake', hour: 0 }], links: [{ source: 0, target: 1, value: 1 }] };
-    }
+    nodes.forEach((node, i) => {
+      const connectedLinks = links.filter(l => l.source === i || l.target === i);
+      let dominantLink = null;
+      let maxVal = -1;
+      
+      connectedLinks.forEach(l => {
+        if (l.value > maxVal) {
+          maxVal = l.value;
+          dominantLink = l;
+        }
+      });
 
-    return { nodes, links };
-  }, [visibleData]);
+      if (dominantLink) {
+        node.fill = dominantLink.fill;
+        node.avgDuration = dominantLink.avgDuration;
+      } else {
+        const durations = nodeDurations.get(i) || [];
+        const avgDuration = durations.reduce((a, b) => a + b, 0) / (durations.length || 1);
+        node.fill = getLinkColor(avgDuration);
+        node.avgDuration = avgDuration;
+      }
+    });
+
+    const totalOriginalEvents = links.reduce((sum, l) => sum + l.originalValue, 0);
+    return { nodes, links, totalEvents: totalOriginalEvents };
+  }, [visibleData, allDailyData]);
+
+  const dynamicHeight = useMemo(() => {
+    if (!sankeyData.links.length) return 600;
+    const minNodeHeight = 13; // for 11px font
+    const padding = 12;
+    
+    const sleepNodes = sankeyData.nodes.filter(n => n.type === 'Sleep').length;
+    const wakeNodes = sankeyData.nodes.filter(n => n.type === 'Wake').length;
+    const maxNodesSide = Math.max(sleepNodes, wakeNodes);
+    const totalBoostedValue = sankeyData.links.reduce((sum, l) => sum + l.value, 0);
+    
+    const vMin = 1.3; // (1 original + 0.3 boost)
+    const requiredHeight = (minNodeHeight * totalBoostedValue / vMin) + (maxNodesSide * padding) + 150;
+    
+    return Math.max(500, Math.min(1000, requiredHeight));
+  }, [sankeyData]);
 
   return (
     <div className="grid">
       <div className="card chart-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0 }}><Clock size={20} /> Sleep Dynamics</h2>
+          <div>
+            <h2 style={{ margin: 0 }}><Clock size={20} /> Sleep Dynamics</h2>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', opacity: 0.7, marginTop: '0.3rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Analyzing {sankeyData.totalEvents} historical nights
+            </div>
+          </div>
           <button 
             className="timeframe-btn"
             onClick={() => setUse24Hour(!use24Hour)}
             style={{ fontSize: '0.65rem', padding: '0.35rem 0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}
           >
-            {use24Hour ? '12H Clock' : '24H Clock'}
+            {use24Hour ? 'Switch to 12H Clock' : 'Switch to 24H Clock'}
           </button>
         </div>
-        <div style={{ width: '100%', height: 420, padding: '1rem 0', position: 'relative' }}>
+        <div style={{ width: '100%', height: dynamicHeight, position: 'relative' }}>
           {/* Column Headers */}
           <div style={{ 
             position: 'absolute', 
@@ -205,16 +283,16 @@ const SleepCharts = ({ visibleData }) => {
             right: 0, 
             display: 'flex', 
             justifyContent: 'space-between',
-            fontSize: '0.65rem',
+            fontSize: '0.7rem',
             fontWeight: 800,
-            letterSpacing: '0.15em',
+            letterSpacing: '0.1em',
             color: 'var(--text-secondary)',
-            opacity: 0.4,
+            opacity: 0.8,
             textTransform: 'uppercase',
             pointerEvents: 'none'
           }}>
-            <span style={{ width: 100, textAlign: 'center' }}>Bedtime</span>
-            <span style={{ width: 100, textAlign: 'center' }}>Wake Up</span>
+            <div style={{ width: 140, textAlign: 'center' }}>Bedtime</div>
+            <div style={{ width: 140, textAlign: 'center' }}>Wake Up</div>
           </div>
           
           <ResponsiveContainer>
@@ -222,11 +300,39 @@ const SleepCharts = ({ visibleData }) => {
               data={sankeyData}
               node={<SankeyNode use24Hour={use24Hour} setHoveredNode={setHoveredNode} />}
               link={<SankeyLink hoveredNode={hoveredNode} />}
-              margin={{ top: 30, right: 100, bottom: 20, left: 100 }}
-              nodePadding={28}
+              margin={{ top: 20, right: 140, bottom: 20, left: 140 }}
+              nodeWidth={14}
+              nodePadding={14}
               iterations={64}
             />
           </ResponsiveContainer>
+        </div>
+        
+        {/* Legend */}
+        <div style={{ 
+          marginTop: '1rem', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '2rem',
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          color: 'var(--text-secondary)',
+          opacity: 0.6
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F43F5E' }} />
+            <span>Insufficient (&lt; 6h)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366F1' }} />
+            <span>Optimal (6-8h)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
+            <span>Excessive (&gt; 8h)</span>
+          </div>
         </div>
       </div>
 
