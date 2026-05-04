@@ -215,7 +215,7 @@ const SankeySection = ({ title, icon: Icon, data, use24Hour }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h2 style={{ margin: 0 }}><Icon size={20} /> {title}</h2>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', opacity: 0.7, marginTop: '0.3rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ marginLeft: '1.8rem', fontSize: '0.75rem', color: 'var(--text-secondary)', opacity: 0.7, marginTop: '0.3rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {data.totalEvents} historical sessions
           </div>
         </div>

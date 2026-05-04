@@ -33,9 +33,9 @@ const CircadianChart = ({ data }) => {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" height={36}/>
-            <Bar yAxisId="left" dataKey="mins_daylight" name="Daylight (mins)" fill="var(--warning)" radius={[4, 4, 0, 0]} opacity={0.6} />
+            <Bar yAxisId="left" dataKey="mins_daylight" name="Daylight (mins)" fill="#FFBB00" radius={[4, 4, 0, 0]} opacity={0.9} />
             <Line yAxisId="right" type="monotone" dataKey="hrv_asleep_avg" name="Asleep HRV (ms)" stroke="var(--accent-color)" strokeWidth={3} dot={{ r: 4 }} />
-            <Line yAxisId="right" type="monotone" dataKey="sleep_quality_score" name="Quality Score" stroke="var(--core)" strokeWidth={2} strokeDasharray="5 5" />
+            <Line yAxisId="right" type="monotone" dataKey="hrv_awake_avg" name="Awake HRV (ms)" stroke="var(--core)" strokeWidth={3} dot={{ r: 4 }} strokeDasharray="3 3" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
