@@ -160,6 +160,7 @@ export const calculateCorrelations = (data) => {
     { name: 'Steps vs Deep Sleep', factor1: 'steps', factor2: 'mins_deep' },
     { name: 'Daylight vs Sleep Quality', factor1: 'mins_daylight', factor2: 'mins_asleep' },
     { name: 'Activity vs HRV', factor1: 'active_kcal', factor2: 'hrv_asleep_avg' },
+    { name: 'Recovery vs Sleep Length', factor1: 'hrv_asleep_avg', factor2: 'mins_asleep' },
   ];
   
   return correlations.map(corr => {
