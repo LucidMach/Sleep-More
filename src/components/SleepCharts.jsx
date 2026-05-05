@@ -17,7 +17,9 @@ const SleepCharts = ({ visibleData, allDailyData }) => {
       if (d.sleep_events) {
         d.sleep_events.forEach(event => {
           const hour = getBucket(event.start);
-          const isNight = hour >= 18 || hour < 6;
+          const isShort = event.duration < 240; // Less than 4 hours is a nap
+          const isNight = (hour >= 18 || hour < 6) && !isShort;
+          
           if (isNight) nightEvents.push(event);
           else dayEvents.push(event);
         });

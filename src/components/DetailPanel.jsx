@@ -3,7 +3,7 @@ const DetailPanel = ({ display, total, hrs, isOptimal, isCritical, barWidth, sta
   const isPositive = display.recovery_ratio >= 1;
 
   return (
-    <div style={{ position: 'relative', borderLeft: '1px solid var(--card-border)', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <div className="detail-panel-container">
       {/* Top Corner Badge */}
       {recoveryDelta > 0 && <div style={{ 
         position: 'absolute',

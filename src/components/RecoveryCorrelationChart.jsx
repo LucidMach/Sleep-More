@@ -15,26 +15,13 @@ import { format, parseISO } from 'date-fns';
 
 const RecoveryCorrelationChart = ({ data }) => {
   const [yAxisMode, setYAxisMode] = useState('recovery'); // 'bedtime', 'waketime', 'recovery'
-  const [timeRange, setTimeRange] = useState({ min: 0, max: 2880 }); // 0 to 48 hours in minutes
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
-  // Initialize time range based on data when mode changes
   useEffect(() => {
-    if (yAxisMode === 'recovery') return;
-    
-    const key = yAxisMode === 'bedtime' ? 'bedtimeNum' : 'wakeTimeNum';
-    const vals = data
-      .filter(d => d.sleep_starts && d.sleep_starts.length > 0)
-      .map(d => {
-        if (yAxisMode === 'bedtime') return d.sleep_starts[0];
-        return d.wake_times?.[0] || (d.sleep_starts[0] + d.mins_in_bed);
-      });
-    
-    if (vals.length > 0) {
-      const min = Math.min(...vals) - 30;
-      const max = Math.max(...vals) + 30;
-      setTimeRange({ min, max });
-    }
-  }, [yAxisMode, data]);
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Filter for days with valid HRV and timing data
   const chartData = useMemo(() => {
@@ -52,15 +39,12 @@ const RecoveryCorrelationChart = ({ data }) => {
           ratio: Number(d.recovery_ratio)
         };
       })
-      .filter(d => {
-        if (yAxisMode === 'recovery') return true;
-        const val = yAxisMode === 'bedtime' ? d.bedtimeNum : d.wakeTimeNum;
-        return val >= timeRange.min && val <= timeRange.max;
-      })
       .sort((a, b) => a.hours - b.hours);
-  }, [data, yAxisMode, timeRange]);
+  }, [data]);
 
-  const getStatusColor = (ratio) => {
+  const getStatusColor = (d) => {
+    if (d.hrv_asleep_avg === 0 || d.hrv_awake_avg === 0) return 'var(--text-secondary)'; // Neutral for partial data
+    const ratio = d.ratio;
     if (ratio >= 1.25) return 'var(--success)';
     if (ratio >= 1.05) return 'var(--accent-color)';
     if (ratio >= 0.95) return 'var(--warning)';
@@ -77,9 +61,9 @@ const RecoveryCorrelationChart = ({ data }) => {
   };
 
   const getYTicks = () => {
-    if (yAxisMode === 'recovery') return { dataKey: 'ratio', name: 'Recovery Ratio', unit: 'x', label: 'Recovery Multiplier', domain: [0.5, 'auto'] };
-    if (yAxisMode === 'bedtime') return { dataKey: 'bedtimeNum', name: 'Bedtime', formatter: formatTime, label: 'Bedtime', domain: [timeRange.min, timeRange.max] };
-    return { dataKey: 'wakeTimeNum', name: 'Wake Time', formatter: formatTime, label: 'Wake Up Time', domain: [timeRange.min, timeRange.max] };
+    if (yAxisMode === 'recovery') return { dataKey: 'ratio', name: 'Recovery Ratio', unit: 'x', label: 'Recovery Multiplier', domain: ['auto', 'auto'] };
+    if (yAxisMode === 'bedtime') return { dataKey: 'bedtimeNum', name: 'Bedtime', formatter: formatTime, label: 'Bedtime', domain: ['auto', 'auto'] };
+    return { dataKey: 'wakeTimeNum', name: 'Wake Time', formatter: formatTime, label: 'Wake Up Time', domain: ['auto', 'auto'] };
   };
 
   const yConfig = getYTicks();
@@ -90,53 +74,26 @@ const RecoveryCorrelationChart = ({ data }) => {
         <div>
           <h2 style={{ margin: 0 }}><Activity size={20} /> Recovery Dynamics</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem' }}>
-            <div className="timeframe-selector">
+            <div className="timeframe-selector" style={{ width: isMobile ? '100%' : 'auto' }}>
               {[
-                { id: 'recovery', label: 'vs Recovery' },
-                { id: 'bedtime', label: 'vs Bedtime' },
-                { id: 'waketime', label: 'vs Wake Time' }
+                { id: 'recovery', label: isMobile ? 'Recovery' : 'vs Recovery' },
+                { id: 'bedtime', label: isMobile ? 'Bedtime' : 'vs Bedtime' },
+                { id: 'waketime', label: isMobile ? 'Wake Time' : 'vs Wake Time' }
               ].map((mode) => (
                 <button
                   key={mode.id}
                   className={`timeframe-btn ${yAxisMode === mode.id ? 'active' : ''}`}
                   onClick={() => setYAxisMode(mode.id)}
-                  style={{ fontSize: '0.7rem', padding: '0.4rem 0.8rem' }}
+                  style={{ fontSize: '0.7rem', padding: '0.4rem 0.8rem', flex: isMobile ? 1 : 'none' }}
                 >
                   {mode.label}
                 </button>
               ))}
             </div>
-
-            {yAxisMode !== 'recovery' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.25rem 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--card-border)' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700 }}>RANGE</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input 
-                    type="range" 
-                    min={timeRange.min - 120} 
-                    max={timeRange.max + 120} 
-                    value={timeRange.min} 
-                    onChange={(e) => setTimeRange(prev => ({ ...prev, min: parseInt(e.target.value) }))}
-                    style={{ width: '60px', accentColor: 'var(--accent-color)' }}
-                  />
-                  <span style={{ fontSize: '0.65rem', minWidth: '45px', color: 'var(--text-primary)', fontWeight: 600 }}>{formatTime(timeRange.min)}</span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.65rem' }}>to</span>
-                  <input 
-                    type="range" 
-                    min={timeRange.min} 
-                    max={timeRange.max + 240} 
-                    value={timeRange.max} 
-                    onChange={(e) => setTimeRange(prev => ({ ...prev, max: parseInt(e.target.value) }))}
-                    style={{ width: '60px', accentColor: 'var(--accent-color)' }}
-                  />
-                  <span style={{ fontSize: '0.65rem', minWidth: '45px', color: 'var(--text-primary)', fontWeight: 600 }}>{formatTime(timeRange.max)}</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 1rem', borderRadius: '0.5rem' }}>
+        <div className="legend-container" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.5rem 1rem', borderRadius: '0.5rem', margin: 0 }}>
           {[
             { label: 'Optimal', color: 'var(--success)' },
             { label: 'Neutral', color: 'var(--accent-color)' },
@@ -151,9 +108,9 @@ const RecoveryCorrelationChart = ({ data }) => {
         </div>
       </div>
 
-      <div style={{ width: '100%', height: 400 }}>
+      <div style={{ width: '100%', height: isMobile ? 300 : 400 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
+          <ScatterChart margin={{ top: 10, right: isMobile ? 10 : 30, bottom: 40, left: isMobile ? 0 : 70 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
             <XAxis 
               type="number" 
@@ -165,7 +122,7 @@ const RecoveryCorrelationChart = ({ data }) => {
               stroke="var(--card-border)"
               tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
               domain={['auto', 'auto']}
-              label={{ value: 'Duration', position: 'bottom', offset: 0, fill: 'var(--text-secondary)', fontSize: 10 }}
+              label={isMobile ? null : { value: 'Duration', position: 'bottom', offset: 25, fill: 'var(--text-secondary)', fontSize: 10 }}
             />
             <YAxis 
               type="number" 
@@ -177,9 +134,10 @@ const RecoveryCorrelationChart = ({ data }) => {
               stroke="var(--card-border)"
               tickFormatter={yConfig.formatter}
               tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-              domain={['auto', 'auto']}
+              domain={yConfig.domain}
               reversed={yAxisMode === 'bedtime'}
-              label={{ value: yConfig.label, angle: -90, position: 'insideLeft', fill: 'var(--text-secondary)', fontSize: 10 }}
+              label={isMobile ? null : { value: yConfig.label, angle: -90, position: 'insideLeft', offset: -45, fill: 'var(--text-secondary)', fontSize: 10 }}
+              width={isMobile ? 40 : 60}
             />
             <ZAxis type="number" range={[64, 64]} />
             <Tooltip 
@@ -187,7 +145,7 @@ const RecoveryCorrelationChart = ({ data }) => {
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const d = payload[0].payload;
-                  const color = getStatusColor(d.ratio);
+                  const color = getStatusColor(d);
                   return (
                     <div className="custom-tooltip">
                       <div className="tooltip-label" style={{ marginBottom: '0.5rem' }}>
@@ -208,7 +166,7 @@ const RecoveryCorrelationChart = ({ data }) => {
                         </div>
                         <div className="tooltip-row" style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem', fontSize: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '0.3rem', paddingTop: '0.3rem' }}>
                           <span style={{ color: 'var(--text-secondary)' }}>Recovery:</span>
-                          <span style={{ fontWeight: 700, color }}>{d.ratio}x</span>
+                          <span style={{ fontWeight: 700, color }}>{d.hrv_asleep_avg > 0 && d.hrv_awake_avg > 0 ? `${d.ratio}x` : 'Insufficient Data'}</span>
                         </div>
                       </div>
                     </div>
@@ -219,7 +177,7 @@ const RecoveryCorrelationChart = ({ data }) => {
             />
             <Scatter name="Recovery" data={chartData}>
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getStatusColor(entry.ratio)} fillOpacity={0.6} />
+                <Cell key={`cell-${index}`} fill={getStatusColor(entry)} fillOpacity={0.6} />
               ))}
             </Scatter>
           </ScatterChart>

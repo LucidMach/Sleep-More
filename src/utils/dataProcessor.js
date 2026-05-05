@@ -98,8 +98,8 @@ export const aggregateData = (data, timeframe) => {
       if (s2 < s1) s2 += 1440;
       
       const inBedDuration = s2 - s1;
-      // Sanity filter: Skip events that are clearly data errors (> 15h or < 1h in-bed)
-      if (inBedDuration > 900 || inBedDuration < 60) {
+      // Sanity filter: Skip events that are clearly data errors (> 15h or < 30m in-bed)
+      if (inBedDuration > 900 || inBedDuration < 30) {
         return;
       }
 

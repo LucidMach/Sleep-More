@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sankey, ResponsiveContainer } from 'recharts';
 
 export const formatBucketTime = (hour, use24Hour) => {
@@ -15,13 +15,15 @@ export const formatBucketTime = (hour, use24Hour) => {
 };
 
 const SankeyNode = (props) => {
-  const { x, y, width, height, payload, use24Hour, setHoveredNode } = props;
+  const { x, y, width, height, payload, use24Hour, setHoveredNode, hoveredNode, isMobile } = props;
   const isSleep = payload.type === 'Sleep';
+  const isHovered = hoveredNode === payload.name;
+  const labelOffset = isMobile ? 35 : 70;
   
   return (
     <g
       onMouseEnter={() => setHoveredNode(payload.name)}
-      onMouseLeave={() => setHoveredNode(null)}
+      onMouseLeave={() => setHoveredNode(prev => prev === payload.name ? null : prev)}
       style={{ cursor: 'pointer' }}
     >
       <rect 
@@ -29,19 +31,22 @@ const SankeyNode = (props) => {
         fill={payload.fill} 
         rx="2"
         fillOpacity={0.9}
+        stroke={payload.isBestOptimal ? (isHovered ? '#fff' : 'rgba(255, 255, 255, 0.4)') : 'none'}
+        strokeWidth={payload.isBestOptimal ? 2 : 0}
         style={{ 
           transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          filter: payload.isBestOptimal ? (isHovered ? `drop-shadow(0 0 5px ${payload.fill})` : 'none') : 'none'
         }}
       />
-      <g transform={`translate(${isSleep ? x - 70 : x + width + 70}, ${y + height / 2})`}>
+      <g transform={`translate(${isSleep ? x - labelOffset : x + width + labelOffset}, ${y + height / 2})`}>
         <text
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="var(--text-primary)"
-          fontSize={11}
-          fontWeight={700}
+          fill={payload.isBestOptimal ? 'var(--text-primary)' : 'var(--text-secondary)'}
+          fontSize={isMobile ? 8 : 11}
+          fontWeight={payload.isBestOptimal ? 800 : 700}
           letterSpacing="0.02em"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: 'none', transition: 'all 0.3s ease' }}
         >
           {formatBucketTime(payload.hour, use24Hour)}
         </text>
@@ -53,12 +58,12 @@ const SankeyNode = (props) => {
 const SankeyLink = (props) => {
   const { 
     sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, 
-    linkWidth, payload, hoveredNode, title = 'Sankey' 
+    linkWidth, payload, hoveredNode, hoveredLinkId, setHoveredLinkId, isMobile
   } = props;
-  const [selfHovered, setSelfHovered] = useState(false);
   
+  const isSelfHovered = payload.id && payload.id === hoveredLinkId;
   const isRelated = hoveredNode && (payload.source.name === hoveredNode || payload.target.name === hoveredNode);
-  const isHighlighted = selfHovered || isRelated;
+  const isHighlighted = isSelfHovered || isRelated;
 
   const color = payload.fill || payload.source?.fill || '#6366F1';
 
@@ -72,8 +77,8 @@ const SankeyLink = (props) => {
         stroke={color}
         strokeWidth={Math.max(1, linkWidth)}
         fill="none"
-        onMouseEnter={() => setSelfHovered(true)}
-        onMouseLeave={() => setSelfHovered(false)}
+        onMouseEnter={() => setHoveredLinkId(payload.id)}
+        onMouseLeave={() => setHoveredLinkId(prev => prev === payload.id ? null : prev)}
         style={{ 
           transition: 'all 0.4s ease', 
           cursor: 'pointer',
@@ -82,18 +87,31 @@ const SankeyLink = (props) => {
         }}
       />
       {isHighlighted && (
-        <text
-          x={(sourceX + targetX) / 2}
-          y={(sourceY + targetY) / 2}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="var(--text-primary)"
-          fontSize={11}
-          fontWeight={800}
-          style={{ pointerEvents: 'none' }}
-        >
-          {payload.originalValue}
-        </text>
+        <g style={{ pointerEvents: 'none'}}>
+          {/* Background Pill for readability */}
+          <rect
+            x={(sourceX + targetX) / 2 - (isMobile ? 30 : 40)}
+            y={(sourceY + targetY) / 2 - (isMobile ? 10 : 12)}
+            width={isMobile ? 60 : 80}
+            height={isMobile ? 16 : 18}
+            rx={9}
+            fill="rgba(15, 23, 42, 0.95)"
+            stroke={payload.isBestOptimal ? "#f1f1f1" : "rgba(255, 255, 255, 0.15)"}
+            strokeWidth={payload.isBestOptimal ? 2 : 1}
+            style={{ backdropFilter: 'blur(4px)' }}
+          />
+          <text
+            x={(sourceX + targetX) / 2}
+            y={(sourceY + targetY) / 2 - (isMobile ? 2 : 2)}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="var(--text-primary)"
+            fontSize={isMobile ? 9 : 11}
+            fontWeight={900}
+          >
+            {payload.originalValue} {isMobile ? 'sess' : (payload.originalValue === 1 ? 'session' : 'sessions')}
+          </text>
+        </g>
       )}
     </g>
   );
@@ -155,14 +173,36 @@ export const processSankeyData = (events, startHour) => {
 
     const key = `${source}-${target}`;
     if (!linkMap.has(key)) {
-      linkMap.set(key, { source, target, value: 0, durations: [] });
+      linkMap.set(key, { source, target, value: 0, durations: [], optimalCount: 0 });
     }
     const link = linkMap.get(key);
     link.value += 1;
     link.durations.push(event.duration);
+
+    // Count optimal sleep based on bucket duration (visual time in bed)
+    const sleepHour = getBucket(event.start);
+    const wakeHour = getBucket(event.end);
+    const bucketDuration = (wakeHour - sleepHour + 24) % 24;
+    if (bucketDuration >= 6 && bucketDuration <= 8) {
+      link.optimalCount += 1;
+    }
   });
 
-  for (const link of linkMap.values()) {
+  let bestOptimalLinkKey = null;
+  let maxOptimalCount = 0;
+  for (const [key, link] of linkMap.entries()) {
+    if (link.optimalCount > maxOptimalCount) {
+      maxOptimalCount = link.optimalCount;
+      bestOptimalLinkKey = key;
+    } else if (link.optimalCount === maxOptimalCount && maxOptimalCount > 0) {
+      // Tie-breaker: use total value
+      if (link.value > linkMap.get(bestOptimalLinkKey).value) {
+        bestOptimalLinkKey = key;
+      }
+    }
+  }
+
+  for (const [key, link] of linkMap.entries()) {
     const avgDuration = link.durations.reduce((a, b) => a + b, 0) / link.durations.length;
     links.push({
       id: Math.random().toString(36).substr(2, 9),
@@ -171,9 +211,16 @@ export const processSankeyData = (events, startHour) => {
       value: link.value + 0.3, 
       originalValue: link.value,
       fill: getLinkColor(avgDuration),
-      avgDuration
+      avgDuration,
+      isBestOptimal: key === bestOptimalLinkKey && maxOptimalCount > 0
     });
   }
+
+  // Sort links by source and target node indices to ensure they follow chronological order
+  links.sort((a, b) => {
+    if (a.source !== b.source) return a.source - b.source;
+    return a.target - b.target;
+  });
 
   nodes.forEach((node, i) => {
     const connectedLinks = links.filter(l => l.source === i || l.target === i);
@@ -182,6 +229,11 @@ export const processSankeyData = (events, startHour) => {
     connectedLinks.forEach(l => {
       if (l.value > maxVal) { maxVal = l.value; dominantLink = l; }
     });
+    
+    // Mark if part of the best optimal flow
+    const isPartOfBest = links.some(l => l.isBestOptimal && (l.source === i || l.target === i));
+    node.isBestOptimal = isPartOfBest;
+
     if (dominantLink) {
       node.fill = dominantLink.fill;
       node.avgDuration = dominantLink.avgDuration;
@@ -208,7 +260,18 @@ export const processSankeyData = (events, startHour) => {
 
 const SankeySection = ({ title, icon: Icon, data, use24Hour }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [hoveredLinkId, setHoveredLinkId] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   if (!data || !data.links || !data.links.length) return null;
+
+  const sideMargin = isMobile ? 60 : 140;
 
   return (
     <div className="card chart-card" style={{ marginBottom: '2rem' }}>
@@ -220,41 +283,36 @@ const SankeySection = ({ title, icon: Icon, data, use24Hour }) => {
           </div>
         </div>
       </div>
-      <div style={{ width: '100%', height: data.dynamicHeight, position: 'relative' }}>
+      <div 
+        style={{ width: '100%', height: isMobile ? 550 : data.dynamicHeight, position: 'relative' }}
+        onMouseLeave={() => {
+          setHoveredNode(null);
+          setHoveredLinkId(null);
+        }}
+      >
         <div style={{ 
           position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', 
-          justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 800, 
+          justifyContent: 'space-between', fontSize: isMobile ? '0.6rem' : '0.7rem', fontWeight: 800, 
           letterSpacing: '0.1em', color: 'var(--text-secondary)', opacity: 0.8, 
           textTransform: 'uppercase', pointerEvents: 'none'
         }}>
-          <div style={{ width: 140, textAlign: 'center' }}>Bedtime</div>
-          <div style={{ width: 140, textAlign: 'center' }}>Wake Up</div>
+          <div style={{ width: sideMargin, textAlign: 'center' }}>Bed{isMobile ? '' : 'time'}</div>
+          <div style={{ width: sideMargin, textAlign: 'center' }}>Wake{isMobile ? '' : ' Up'}</div>
         </div>
         <ResponsiveContainer>
           <Sankey
             data={data}
-            node={<SankeyNode use24Hour={use24Hour} setHoveredNode={setHoveredNode} />}
-            link={<SankeyLink hoveredNode={hoveredNode} title={title} />}
-            margin={{ top: 25, right: 140, bottom: 20, left: 140 }}
+            node={<SankeyNode use24Hour={use24Hour} setHoveredNode={setHoveredNode} hoveredNode={hoveredNode} isMobile={isMobile} />}
+            link={<SankeyLink hoveredNode={hoveredNode} hoveredLinkId={hoveredLinkId} setHoveredLinkId={setHoveredLinkId} isMobile={isMobile} />}
+            margin={{ top: 25, right: sideMargin, bottom: 20, left: sideMargin }}
             nodeWidth={14}
-            nodePadding={14}
-            iterations={32}
+            nodePadding={isMobile ? 10 : 14}
+            iterations={0}
           />
         </ResponsiveContainer>
       </div>
 
-      <div style={{ 
-        marginTop: '1.5rem', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        gap: '2.5rem',
-        fontSize: '0.7rem',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: 'var(--text-secondary)',
-        opacity: 0.7
-      }}>
+      <div className="legend-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <div style={{ width: 10, height: 10, borderRadius: '2px', background: '#F43F5E', boxShadow: '0 0 10px rgba(244, 63, 94, 0.3)' }} />
           <span>Insufficient</span>
@@ -267,7 +325,13 @@ const SankeySection = ({ title, icon: Icon, data, use24Hour }) => {
           <div style={{ width: 10, height: 10, borderRadius: '2px', background: '#F59E0B', boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)' }} />
           <span>Excessive</span>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ width: 10, height: 10, borderRadius: '2px', background: '#1A1A1A', border: "2px solid #f1f1f1" }} />
+          <span>GOLDEN ROUTINE</span>
+        </div>
       </div>
+      <br />
+      <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', opacity: 0.7 }}><span style={{ fontWeight: 'bold' }}>Golden Routine:</span> The most frequent routine where you experience optimal sleep.</p>
     </div>
   );
 };

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
   Moon, 
-  ChevronLeft, 
-  ChevronRight 
 } from 'lucide-react';
 import { fetchData, aggregateData, calculateCorrelations } from './utils/dataProcessor';
 

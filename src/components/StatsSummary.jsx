@@ -1,5 +1,5 @@
 const StatsSummary = ({ display }) => (
-  <div style={{ paddingTop: '1.5rem', display: 'flex', gap: '5rem', borderTop: '1px solid var(--card-border)', marginTop: '1.5rem' }}>
+  <div className="stats-summary-container">
     <div style={{ flexGrow: 0.1 }}>
       <div className="stat-label" style={{ marginBottom: '0.2rem', fontSize: '0.65rem' }}>SLEEP QUALITY</div>
       <div style={{ display: 'flex', direction: "column", alignItems: 'baseline', gap: '0.75rem' }}>
@@ -12,7 +12,7 @@ const StatsSummary = ({ display }) => (
         *normalised to a scale of 0-100
       </p>
     </div>
-    <div style={{ width: '1px', background: 'rgba(148, 163, 184, 0.4)', alignSelf: 'stretch' }}></div>
+    <div className="stats-summary-divider" style={{ width: '1px', background: 'rgba(148, 163, 184, 0.4)', alignSelf: 'stretch' }}></div>
     <div style={{ flexGrow: 0.9 }}>
       <div className="stat-label" style={{ marginBottom: '0.2rem', fontSize: '0.65rem' }}>SLEEP QUANTITY</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
