@@ -70,14 +70,6 @@ const RecoveryCorrelationChart = ({ data }) => {
   const getYTicks = () => {
     if (yAxisMode === "recovery")
       return {
-        dataKey: "ratio",
-        name: "Recovery Ratio",
-        unit: "x",
-        label: "Recovery Multiplier",
-        domain: ["auto", "auto"],
-      };
-    if (yAxisMode === "quality")
-      return {
         dataKey: "sleep_quality_score",
         name: "Sleep Quality",
         unit: "%",
@@ -117,7 +109,7 @@ const RecoveryCorrelationChart = ({ data }) => {
       >
         <div>
           <h2 style={{ margin: 0 }}>
-            <Activity size={20} /> Recovery Dynamics
+            <Activity size={20} /> Recovery Rate Analysis
           </h2>
           <div
             style={{
@@ -134,16 +126,17 @@ const RecoveryCorrelationChart = ({ data }) => {
               {[
                 {
                   id: "recovery",
-                  label: isMobile ? "Recovery" : "vs Sleep Duration",
+                  label: isMobile
+                    ? "Quality"
+                    : "Sleep Quality vs Sleep Duration",
                 },
                 {
-                  id: "quality",
-                  label: isMobile ? "Quality" : "vs Sleep Quality",
+                  id: "bedtime",
+                  label: isMobile ? "Bedtime" : "Sleep Duration vs Bedtime",
                 },
-                { id: "bedtime", label: isMobile ? "Bedtime" : "vs Bedtime" },
                 {
                   id: "waketime",
-                  label: isMobile ? "Wake Time" : "vs Wake Time",
+                  label: isMobile ? "Wake Time" : "Sleep Duration vs Wake Time",
                 },
               ].map((mode) => (
                 <button
@@ -170,13 +163,28 @@ const RecoveryCorrelationChart = ({ data }) => {
             padding: "0.5rem 1rem",
             borderRadius: "0.5rem",
             margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.25rem",
           }}
         >
+          <div
+            style={{
+              fontSize: "0.6rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color: "var(--text-secondary)",
+              opacity: 0.8,
+              marginBottom: "0.2rem",
+            }}
+          >
+            Sleep Recovery Rate
+          </div>
           {[
-            { label: "Optimal", color: "var(--success)" },
-            { label: "Neutral", color: "var(--accent-color)" },
-            { label: "Borderline", color: "var(--warning)" },
-            { label: "Low", color: "var(--danger)" },
+            { label: "Optimal (>1.25x)", color: "var(--success)" },
+            { label: "Neutral (1.05-1.25x)", color: "var(--accent-color)" },
+            { label: "Borderline (0.95-1.05x)", color: "var(--warning)" },
+            { label: "Low (<0.95x)", color: "var(--danger)" },
           ].map((item) => (
             <div
               key={item.label}
@@ -219,9 +227,9 @@ const RecoveryCorrelationChart = ({ data }) => {
             />
             <XAxis
               type="number"
-              dataKey={yAxisMode === "quality" ? "ratio" : "hours"}
-              name={yAxisMode === "quality" ? "Recovery Ratio" : "Sleep Length"}
-              unit={yAxisMode === "quality" ? "x" : "h"}
+              dataKey="hours"
+              name="Sleep Length"
+              unit="h"
               axisLine={true}
               tickLine={true}
               stroke="var(--card-border)"
@@ -231,10 +239,7 @@ const RecoveryCorrelationChart = ({ data }) => {
                 isMobile
                   ? null
                   : {
-                      value:
-                        yAxisMode === "quality"
-                          ? "Recovery Multiplier"
-                          : "Duration",
+                      value: "Duration",
                       position: "bottom",
                       offset: 25,
                       fill: "var(--text-secondary)",
@@ -370,7 +375,7 @@ const RecoveryCorrelationChart = ({ data }) => {
                           }}
                         >
                           <span style={{ color: "var(--text-secondary)" }}>
-                            Recovery:
+                            Recovery Rate:
                           </span>
                           <span style={{ fontWeight: 700, color }}>
                             {d.hrv_asleep_avg > 0 && d.hrv_awake_avg > 0
@@ -385,7 +390,7 @@ const RecoveryCorrelationChart = ({ data }) => {
                 return null;
               }}
             />
-            <Scatter name="Recovery" data={chartData}>
+            <Scatter name="Recovery Rate" data={chartData}>
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}

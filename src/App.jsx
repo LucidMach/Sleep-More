@@ -73,7 +73,7 @@ const Dashboard = () => {
       </header>
 
       <SleepHeatmap data={dailyData} onSelectDate={handleSelectDate} timeframe={timeframe} />
-      <SleepCharts visibleData={visibleData} allDailyData={dailyData} />
+      <SleepCharts visibleData={visibleData} allDailyData={dailyData} timeframe={timeframe} />
 
       <div className="grid">
         <HabitInsights correlations={correlations} />
