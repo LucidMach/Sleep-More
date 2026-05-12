@@ -181,8 +181,8 @@ const RecoveryCorrelationChart = ({ data }) => {
             Sleep Recovery Rate
           </div>
           {[
-            { label: "Optimal (>1.25x)", color: "var(--success)" },
-            { label: "Neutral (1.05-1.25x)", color: "var(--accent-color)" },
+            { label: "Excellent (>1.25x)", color: "var(--success)" },
+            { label: "Good (1.05-1.25x)", color: "var(--accent-color)" },
             { label: "Borderline (0.95-1.05x)", color: "var(--warning)" },
             { label: "Low (<0.95x)", color: "var(--danger)" },
           ].map((item) => (
@@ -191,6 +191,7 @@ const RecoveryCorrelationChart = ({ data }) => {
               style={{
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "start",
                 gap: "0.4rem",
                 fontSize: "0.65rem",
                 color: "var(--text-secondary)",

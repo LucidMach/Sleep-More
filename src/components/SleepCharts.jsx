@@ -24,8 +24,8 @@ const SleepCharts = ({
       if (d.sleep_events) {
         d.sleep_events.forEach(event => {
           const hour = getBucket(event.start);
-          const isShort = event.duration < 240; // Less than 4 hours is a nap
-          const isNight = (hour >= 18 || hour < 6) && !isShort;
+          // Simplified: Night is 6 PM (18:00) to 6 AM (06:00)
+          const isNight = (hour >= 18 || hour < 6);
           
           if (isNight) nightEvents.push(event);
           else dayEvents.push(event);
