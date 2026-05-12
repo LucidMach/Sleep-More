@@ -20,7 +20,7 @@ import DetailPanel from "./DetailPanel";
 const SleepHeatmap = ({ data, onSelectDate, timeframe }) => {
   const [hovered, setHovered] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
-  const [metric, setMetric] = useState("quality"); // 'quality' or 'recovery'
+  const [metric, setMetric] = useState("quality"); // 'quality', 'recovery', or 'quantity'
 
   const { yearGroups, allYears } = useMemo(() => {
     if (!data || data.length === 0) return { yearGroups: {}, allYears: [] };
@@ -222,12 +222,27 @@ const SleepHeatmap = ({ data, onSelectDate, timeframe }) => {
       [r, g, b] = getBaseColor(d);
       intensity = d.sleep_quality_score / 100;
       opacity = Math.max(0.2, intensity);
-    } else {
+    } else if (metric === "recovery") {
       const ratio = parseFloat(d.recovery_ratio) || 0;
       [r, g, b] = getRecoveryColor(ratio);
       intensity = Math.max(0, Math.min(1, (ratio - 0.7) / 0.8));
       // Full punchy opacity for recovery
       opacity = Math.max(0.85, intensity);
+    } else {
+      // Quantity mode - Uses the same Red-Orange-Purple theme as the quantity bar
+      [r, g, b] = getBaseColor(d);
+      
+      const hrs = d.mins_asleep / 60;
+      // High intensity for optimal (6-8h), lower for extremes
+      if (hrs >= 6 && hrs <= 8) {
+        intensity = 0.9;
+      } else if (hrs < 6) {
+        intensity = Math.max(0.3, hrs / 6);
+      } else {
+        intensity = Math.max(0.3, 1 - (hrs - 8) / 4);
+      }
+      
+      opacity = Math.max(0.4, intensity);
     }
 
     const saturation = 40 + intensity * 45; // Max 85% saturation instead of 100%
@@ -294,6 +309,12 @@ const SleepHeatmap = ({ data, onSelectDate, timeframe }) => {
                   onClick={() => setMetric("recovery")}
                 >
                   Recovery
+                </div>
+                <div
+                  className={`toggle-option ${metric === "quantity" ? "active" : ""}`}
+                  onClick={() => setMetric("quantity")}
+                >
+                  Quantity
                 </div>
               </div>
             </div>
@@ -379,8 +400,9 @@ const SleepInfo = () => (
       }}
     >
       <p>
-        Toggle between <strong>Quality</strong> and <strong>Recovery</strong> to
-        visualize different aspects of your sleep health.
+        Toggle between <strong>Quality</strong>, <strong>Recovery</strong> and{" "}
+        <strong>Quantity</strong> to visualize different aspects of your sleep
+        health.
       </p>
 
       <div
@@ -431,6 +453,27 @@ const SleepInfo = () => (
           <p style={{ fontSize: "0.8rem", opacity: 0.8 }}>
             Ratio of HRV during sleep vs awake. A higher ratio indicates better
             autonomic recovery. Low HRV implies high stress or fatigue.
+          </p>
+        </div>
+        <div
+          style={{
+            padding: "1rem",
+            background: "rgba(255,255,255,0.03)",
+            borderRadius: "0.75rem",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              color: "#a855f7", // Purple
+              marginBottom: "0.25rem",
+            }}
+          >
+            SLEEP QUANTITY
+          </div>
+          <p style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+            Total duration of sleep in hours. Colors match the quantity bar:
+            Red (Insufficient/Excessive), Orange (Borderline), Purple (Optimal).
           </p>
         </div>
       </div>

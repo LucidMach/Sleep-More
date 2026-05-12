@@ -2,7 +2,7 @@ const HeatmapLegend = ({ metric }) => {
   const getLegendColor = (q) => {
     if (metric === "quality") {
       return `rgba(67, 56, 202, ${q})`;
-    } else {
+    } else if (metric === "recovery") {
       // Red to Green gradient for recovery
       const normalized = q;
       let r, g, b;
@@ -18,13 +18,31 @@ const HeatmapLegend = ({ metric }) => {
         b = Math.round(20 + 90 * sub);
       }
       return `rgba(${r}, ${g}, ${b}, ${Math.max(0.85, q)})`;
+    } else {
+      // Quantity legend - matches the health-based bar (Red-Orange-Purple-Orange-Red)
+      const hrs = q * 10;
+      let r, g, b;
+      if (hrs >= 6 && hrs <= 8) {
+        [r, g, b] = [67, 56, 202];
+      } else if (hrs < 6) {
+        const ratio = Math.min(1, hrs / 6);
+        r = Math.round(239 + (245 - 239) * ratio);
+        g = Math.round(68 + (158 - 68) * ratio);
+        b = Math.round(68 + (11 - 68) * ratio);
+      } else {
+        const ratio = Math.min(1, (hrs - 8) / 4);
+        r = Math.round(245 + (239 - 245) * ratio);
+        g = Math.round(158 + (68 - 158) * ratio);
+        b = Math.round(11 + (68 - 11) * ratio);
+      }
+      return `rgba(${r}, ${g}, ${b}, ${Math.max(0.4, q)})`;
     }
   };
 
   const getBorderColor = (q) => {
     if (metric === "quality") {
       return q > 0.8 ? "1px solid rgba(67, 56, 202, 0.8)" : "none";
-    } else {
+    } else if (metric === "recovery") {
       // Use the same color logic for recovery border
       const normalized = q;
       let r, g, b;
@@ -38,6 +56,24 @@ const HeatmapLegend = ({ metric }) => {
         r = Math.round(255 - 210 * sub);
         g = Math.round(210 - 20 * sub);
         b = Math.round(20 + 90 * sub);
+      }
+      return q > 0.8 ? `1px solid rgba(${r}, ${g}, ${b}, 0.8)` : "none";
+    } else {
+      // Quantity border - matches the health-based bar
+      const hrs = q * 10;
+      let r, g, b;
+      if (hrs >= 6 && hrs <= 8) {
+        [r, g, b] = [67, 56, 202];
+      } else if (hrs < 6) {
+        const ratio = Math.min(1, hrs / 6);
+        r = Math.round(239 + (245 - 239) * ratio);
+        g = Math.round(68 + (158 - 68) * ratio);
+        b = Math.round(68 + (11 - 68) * ratio);
+      } else {
+        const ratio = Math.min(1, (hrs - 8) / 4);
+        r = Math.round(245 + (239 - 245) * ratio);
+        g = Math.round(158 + (68 - 158) * ratio);
+        b = Math.round(11 + (68 - 11) * ratio);
       }
       return q > 0.8 ? `1px solid rgba(${r}, ${g}, ${b}, 0.8)` : "none";
     }
@@ -55,7 +91,13 @@ const HeatmapLegend = ({ metric }) => {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span>{metric === "quality" ? "Low Quality" : "Low Recovery"}</span>
+        <span>
+          {metric === "quality"
+            ? "Low Quality"
+            : metric === "recovery"
+              ? "Low Recovery"
+              : "Insufficient"}
+        </span>
         <div style={{ display: "flex", gap: "2px" }}>
           {[0.2, 0.4, 0.6, 0.8, 1].map((q) => (
             <div
@@ -71,7 +113,13 @@ const HeatmapLegend = ({ metric }) => {
             />
           ))}
         </div>
-        <span>{metric === "quality" ? "High Quality" : "High Recovery"}</span>
+        <span>
+          {metric === "quality"
+            ? "High Quality"
+            : metric === "recovery"
+              ? "High Recovery"
+              : "Excessive"}
+        </span>
       </div>
 
       <div
