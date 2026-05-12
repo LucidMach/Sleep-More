@@ -5,7 +5,14 @@ import HabitsChart from './HabitsChart';
 import CircadianChart from './CircadianChart';
 import RecoveryCorrelationChart from './RecoveryCorrelationChart';
 
-const SleepCharts = ({ visibleData, allDailyData, timeframe }) => {
+const SleepCharts = ({
+  visibleData,
+  allDailyData,
+  timeframe,
+  onShiftWindow,
+  canShiftLeft,
+  canShiftRight,
+}) => {
   const [use24Hour, setUse24Hour] = useState(true);
 
   const { nightSankey, daySankey } = useMemo(() => {
@@ -48,8 +55,20 @@ const SleepCharts = ({ visibleData, allDailyData, timeframe }) => {
         use24Hour={use24Hour} 
       />
 
-      <HabitsChart data={visibleData} timeframe={timeframe} />
-      <CircadianChart data={visibleData} timeframe={timeframe} />
+      <HabitsChart
+        data={visibleData}
+        timeframe={timeframe}
+        onShift={onShiftWindow}
+        canShiftLeft={canShiftLeft}
+        canShiftRight={canShiftRight}
+      />
+      <CircadianChart
+        data={visibleData}
+        timeframe={timeframe}
+        onShift={onShiftWindow}
+        canShiftLeft={canShiftLeft}
+        canShiftRight={canShiftRight}
+      />
       <div style={{ gridColumn: '1 / -1' }}>
         <RecoveryCorrelationChart data={allDailyData} />
       </div>

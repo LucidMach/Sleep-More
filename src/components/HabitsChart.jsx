@@ -10,10 +10,16 @@ import {
   Bar,
   Line,
 } from "recharts";
-import { Activity } from "lucide-react";
+import { Activity, ChevronLeft, ChevronRight } from "lucide-react";
 import CustomTooltip from "./CustomTooltip";
 
-const HabitsChart = ({ data, timeframe }) => {
+const HabitsChart = ({
+  data,
+  timeframe,
+  onShift,
+  canShiftLeft,
+  canShiftRight,
+}) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
   useEffect(() => {
@@ -29,9 +35,36 @@ const HabitsChart = ({ data, timeframe }) => {
 
   return (
     <div className="card chart-card">
-      <h2>
-        <Activity size={20} /> Activity & Sleep Correlation
-      </h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <h2 style={{ marginBottom: 0 }}>
+          <Activity size={20} /> Activity & Sleep Correlation
+        </h2>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            className={`timeframe-btn ${!canShiftLeft ? "disabled" : ""}`}
+            onClick={() => canShiftLeft && onShift(-1)}
+            disabled={!canShiftLeft}
+            style={{ padding: "0.4rem", opacity: canShiftLeft ? 1 : 0.3 }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            className={`timeframe-btn ${!canShiftRight ? "disabled" : ""}`}
+            onClick={() => canShiftRight && onShift(1)}
+            disabled={!canShiftRight}
+            style={{ padding: "0.4rem", opacity: canShiftRight ? 1 : 0.3 }}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
       <div style={{ width: "100%", height: isMobile ? 300 : 350 }}>
         <ResponsiveContainer>
           <ComposedChart data={data}>

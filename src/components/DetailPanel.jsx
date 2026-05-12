@@ -8,6 +8,7 @@ const DetailPanel = ({
   stages,
   durationColor,
   recoveryColor,
+  qualityColor,
 }) => {
   const recoveryDelta = Math.abs(
     Math.round((display.recovery_ratio - 1) * 100),
@@ -196,7 +197,7 @@ const DetailPanel = ({
             style={{
               fontSize: "1.1rem",
               fontWeight: 800,
-              color: "var(--text-primary)",
+              color: qualityColor || "var(--text-primary)",
             }}
           >
             {display.sleep_quality_score}%
